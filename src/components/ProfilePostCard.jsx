@@ -1,12 +1,12 @@
-import { useContext } from "react";
+import { useContext, useState } from "react";
 import { Button, Col, Image, Row } from "react-bootstrap";
 import { AuthContext } from "./AuthProvider";
 
 export default function ProfilePostCard({ post}) {
-  const { content, id: postId, likes = [] } = post;
+  const { content, id: postId, likes: postLikes = [], imageUrl } = post;
   const { currentUser, likePost, removeLikeFromPost } = useContext(AuthContext);
   const userId = currentUser?.uid;
-
+  const [likes,setLikes] = useState(postLikes || [])
   const isLiked = likes.includes(userId);
 
   const pic = "https://pbs.twimg.com/profile_images/1587405892437221376/h167Jlb2_400x400.jpg";
@@ -14,8 +14,10 @@ export default function ProfilePostCard({ post}) {
   const handleLike = () => {
     if (!userId) return;
     if (isLiked) {
+      setLikes(likes.filter((id)=> id !== userId))
       removeLikeFromPost(userId, postId);
     } else {
+      setLikes([...likes, userId])
       likePost(userId, postId);
     }
   };
@@ -36,6 +38,7 @@ export default function ProfilePostCard({ post}) {
         <strong>Haris</strong>
         <span> @haris.samingan · Apr 16</span>
         <p>{content}</p>
+        {imageUrl && <Image src={imageUrl} style={{width:150}}/>}
         <div className="d-flex justify-content-between">
           <Button variant="light">
             <i className="bi bi-chat"></i>

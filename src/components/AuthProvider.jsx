@@ -1,5 +1,6 @@
 import { createContext, useEffect, useState, useCallback } from "react";
-import { auth,db } from "../firebase";
+import { auth,db,storage } from "../firebase";
+import { getDownloadURL,ref,uploadBytes } from "firebase/storage";
 import {collection,doc,getDoc,getDocs,setDoc} from 'firebase/firestore'
 
 export const AuthContext = createContext();
@@ -17,6 +18,13 @@ export function AuthProvider({ children }) {
     });
   }, []);
 
+  const uploadFile = useCallback(async (file) => {
+  const storageRef = ref(storage, `posts/${file.name}`);
+  const response = await uploadBytes(storageRef, file);
+  const url = await getDownloadURL(response.ref);
+  return url;
+}, []);
+  
   const fetchPostsByUser = useCallback(async (userId) => {
   setPostsLoading(true);
   try {
@@ -34,21 +42,21 @@ export function AuthProvider({ children }) {
   }
 }, []);
 
-const savePost = useCallback(async (userId, postContent) => {
+const savePost = useCallback(async (userId, postContent, file) => {
   try {
+    let imageUrl = null;
+    if (file) {
+      imageUrl = await uploadFile(file);
+    }
     const postsRef = collection(db, `users/${userId}/posts`);
     const newPostRef = doc(postsRef);
-    await setDoc(newPostRef, { content: postContent, likes: [] });
+    await setDoc(newPostRef, { content: postContent, likes: [], imageUrl });
     const newPost = await getDoc(newPostRef);
-    const post = {
-      id: newPost.id,
-      ...newPost.data(),
-    };
-    setPosts((prev) => [post, ...prev]);
+    setPosts((prev) => [{ id: newPost.id, ...newPost.data()}, ...prev]);
   } catch (error) {
     console.error(error);
   }
-}, []);
+}, [uploadFile]);
 
 const likePost = useCallback(async (userId, postId) => {
   try {
