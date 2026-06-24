@@ -1,7 +1,7 @@
 import { createContext, useEffect, useState, useCallback } from "react";
 import { auth,db,storage } from "../firebase";
 import { getDownloadURL,ref,uploadBytes } from "firebase/storage";
-import {collection,doc,getDoc,getDocs,setDoc} from 'firebase/firestore'
+import {collection,doc,getDoc,getDocs,setDoc,updateDoc } from 'firebase/firestore'
 
 export const AuthContext = createContext();
 
@@ -96,12 +96,45 @@ const removeLikeFromPost = useCallback(async (userId, postId) => {
   }
 }, []);
 
+const updatePost = useCallback(
+  async (userId, postId, newPostContent, newFile) => {
+    try {
+      const postRef = doc(db, `users/${userId}/posts/${postId}`);
+      const postSnap = await getDoc(postRef);
+      if (!postSnap.exists()) throw new Error("Post does not exist");
+
+      let newImageUrl = null;
+      if (newFile) {
+        newImageUrl = await uploadFile(newFile);
+      }
+
+      const postData = postSnap.data();
+      const updatedData = {
+        ...postData,
+        content: newPostContent || postData.content,
+        imageUrl: newImageUrl || postData.imageUrl,
+      };
+
+      await updateDoc(postRef, updatedData);
+
+      setPosts((prev) =>
+        prev.map((p) => (p.id === postId ? { id: postId, ...updatedData } : p))
+      );
+    } catch (error) {
+      console.error(error);
+    }
+  },
+  [uploadFile]
+);
+
+
 const value = {
   currentUser,
   posts,
   postsLoading,
   fetchPostsByUser,
   savePost,
+  updatePost,
   likePost,
   removeLikeFromPost,
 };
